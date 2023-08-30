@@ -1,0 +1,72 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(gdb) boot",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/target/boot/boot.elf",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceRoot}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "x86_64-elf-gdb",
+      "miDebuggerServerAddress": "127.0.0.1:1234",
+      "targetArchitecture": "x86_64",
+      "stopAtConnect": true,
+      "windows": {
+        "preLaunchTask": "",
+      },
+      "linux": {
+        "miDebuggerPath": "gdb",
+      },
+      "customLaunchSetupCommands": [],
+      "setupCommands": [
+        {
+          "description": "gdb pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "postRemoteConnectCommands": [
+        {
+          "description": "",
+          "text": "-file-symbol-file ./target/kernel/kernel.elf",
+          "ignoreFailures": false
+        },
+        {
+          "description": "",
+          "text": "add-symbol-file ./target/loader/loader.elf 0x8000",
+          "ignoreFailures": false
+        },
+        {
+          "description": "",
+          "text": "add-symbol-file ./target/boot/boot.elf 0x7c00",
+          "ignoreFailures": false
+        },
+        {
+          "description": "",
+          "text": "add-symbol-file ./target/init/init.elf 0x81000000",
+          "ignoreFailures": false
+        },
+        {
+          "description": "",
+          "text": "add-symbol-file ./target/loop/loop.elf 0x83000000",
+          "ignoreFailures": false
+        },
+        {
+          "description": "",
+          "text": "-exec-until *0x7c00",
+          "ignoreFailures": false
+        }
+      ]
+    }
+  ]
+}

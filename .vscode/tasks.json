@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "write image",
+      "type": "shell",
+      "command": "bash ${workspaceRoot}/script/img-write-osx.sh",
+      "windows": {
+        "command": "${workspaceRoot}/script/img-wirte-win.bat",
+      },
+      "linux": {
+        "command": "bash ${workspaceRoot}/script/img-write-linux.sh",
+      },
+      "options": {
+        "cwd": "${workspaceRoot}/../../image/"
+      }
+    },
+    {
+      "label": "start qemu",
+      "type": "shell",
+      "command": "bash ${workspaceRoot}/script/qemu-debug-osx.sh",
+      "windows": {
+        "command": "${workspaceRoot}/script/qemu-debug-win.bat",
+      },
+      "linux": {
+        "command": "bash ${workspaceRoot}/script/qemu-debug-linux.sh",
+      },
+      "options": {
+        "cwd": "${workspace}/../../image/"
+      }
+    },
+    {
+      "label": "debug perparation",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "write image",
+        "start qemu",
+      ]
+    }
+  ]
+}
