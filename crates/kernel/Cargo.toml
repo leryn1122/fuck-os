@@ -1,0 +1,36 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+  [dependencies.bootloader]
+  version = "0.9.8"
+
+  [dependencies.log]
+  version = "0.4.21"
+
+  [dependencies.spin]
+  version = "0.5.2"
+
+  [dependencies.volatile]
+  version = "0.4.4"
+
+  [dependencies.lazy_static]
+  version = "1.0"
+  features = ["spin_no_std"]
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+x86_64 = "0.15.1"
+
+[package.metadata.bootimage]
+test-args = [
+  "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
+  "-serial", "stdio",
+  "-display", "none"
+]
+test-success-exit-code = 33
+test-timeout = 300
