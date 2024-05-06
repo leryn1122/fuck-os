@@ -22,3 +22,9 @@ indent_style = tab
 [*.sh]
 indent_size = 2
 indent_style = space
+
+[*.toml]
+ij_toml_continuation_indent_size = 2
+ij_toml_indent_size = 2
+ij_toml_keep_indents_on_empty_lines = true
+ij_toml_tab_width = 2
