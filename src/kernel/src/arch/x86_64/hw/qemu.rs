@@ -7,12 +7,27 @@ pub enum QemuExitCode {
   Failed = 0x11,
 }
 
+pub(crate) struct ExitPort(Port<u32>);
+
+impl ExitPort {
+  pub unsafe fn new() -> Self {
+    Self(unsafe { Port::new(0xF4) })
+  }
+
+  pub fn exit(&mut self, code: QemuExitCode) -> ! {
+    unsafe {
+      self.0.write(code as u32);
+    }
+    unreachable!()
+  }
+}
+
 #[cfg(test)]
 pub fn exit_qemu(exit_code: QemuExitCode) {
   #[cfg(target_arch = "x86_64")]
   unsafe {
-    let mut port = Port::new(0xF4);
-    port.write(exit_code as u32);
+    let mut port = ExitPort::new();
+    port.0.write(exit_code as u32);
   }
 
   #[cfg(target_arch = "aarch64")]

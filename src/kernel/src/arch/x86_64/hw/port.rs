@@ -1,15 +1,21 @@
-use core::arch::asm;
 use core::marker::PhantomData;
 
+/// Port number.
 pub type PortNumber = u16;
 
 pub trait PortSize: PortRead + PortWrite {}
 
+/// A helper trait that implements the read port operation.
 pub trait PortRead {
+  /// # Safety
+  /// Unsafe because the I/O port could have side effects that violate memory safety.
   unsafe fn read_from_port(port: PortNumber) -> Self;
 }
 
+/// A helper trait that implements the write port operation.
 pub trait PortWrite {
+  /// # Safety
+  /// Unsafe because the I/O port could have side effects that violate memory safety.
   unsafe fn write_to_port(port: PortNumber, value: Self);
 }
 
@@ -26,10 +32,14 @@ impl<S: PortSize> Port<S> {
     }
   }
 
+  #[inline]
+  #[doc(hidden)]
   pub unsafe fn read(&self) -> S {
     unsafe { S::read_from_port(self.port) }
   }
 
+  #[inline]
+  #[doc(hidden)]
   pub unsafe fn write(&self, value: S) {
     unsafe {
       S::write_to_port(self.port, value);

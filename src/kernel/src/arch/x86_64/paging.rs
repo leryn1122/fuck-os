@@ -1,23 +1,37 @@
 use bitflags::bitflags;
 
+use crate::arch::FrameError;
 use crate::arch::PhysicalAddress;
+use crate::arch::PhysicalFrame;
+use crate::arch::PtrWidth;
+use crate::arch::VirtualAddress;
 
 /// Count of entries in the page table.
 const ENTRY_COUNT: usize = 512;
 
+/// Page size for CPU page.
 pub trait PageSize {
-  const SIZE: usize;
+  const SIZE: PtrWidth;
 
+  /// String for debug, such as `4KiB`.
   #[cfg(debug_assertions)]
   const DEBUG_STR: &'static str;
 }
 
 pub struct Size4KiB;
 
-//noinspection RsSortImplTraitMembers
+// noinspection RsSortImplTraitMembers
 impl PageSize for Size4KiB {
+  #[cfg(debug_assertions)]
   const DEBUG_STR: &'static str = "4KiB";
-  const SIZE: usize = 4096;
+  const SIZE: PtrWidth = 4096;
+}
+
+impl VirtualAddress {
+  #[inline]
+  pub const fn page_offset(self) -> PageOffset {
+    PageOffset::new_truncate(self.0 as u16)
+  }
 }
 
 /// # CPU Page Table
@@ -29,6 +43,7 @@ pub struct PageTable {
 }
 
 impl PageTable {
+  /// Create a new page table.
   #[inline]
   pub const fn new() -> Self {
     const EMPTY: PageTableEntry = PageTableEntry::new();
@@ -37,6 +52,7 @@ impl PageTable {
     }
   }
 
+  /// Return the iterator over page table entries.
   #[inline]
   pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
     (0..ENTRY_COUNT).map(move |i| &self.entries[i])
@@ -54,8 +70,9 @@ impl PageTable {
     self.iter().all(|entry| entry.is_unused())
   }
 
+  /// Reset the page table.
   #[inline]
-  pub fn zero(&mut self) {
+  pub fn reset(&mut self) {
     for entry in self.iter_mut() {
       entry.set_unused();
     }
@@ -94,7 +111,7 @@ impl core::fmt::Debug for PageTable {
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct PageTableEntry {
-  entry: u64,
+  entry: PtrWidth,
 }
 
 impl PageTableEntry {
@@ -122,17 +139,28 @@ impl PageTableEntry {
   /// Returns the physical address
   #[inline]
   pub fn address(&self) -> PhysicalAddress {
-    PhysicalAddress::new((self.entry & 0x000F_FFFF_FFFF_F000) as usize)
+    PhysicalAddress::new(self.entry & 0x000F_FFFF_FFFF_F000)
   }
 
   #[inline]
   pub fn set_address(&mut self, address: PhysicalAddress, flags: PageTableFlags) {
-    self.entry = address.as_u64() | flags.bits();
+    self.entry = address.as_raw() | flags.bits();
   }
 
   #[inline]
   pub fn set_flags(&mut self, flags: PageTableFlags) {
-    self.entry = self.address().as_u64() | flags.bits()
+    self.entry = self.address().as_raw() | flags.bits()
+  }
+
+  #[inline]
+  pub fn frame(&self) -> Result<PhysicalFrame, FrameError> {
+    if !self.flags().contains(PageTableFlags::PRESENT) {
+      Err(FrameError::FrameNotPresent)
+    } else if self.flags().contains(PageTableFlags::HUGE_PAGE) {
+      Err(FrameError::HugePage)
+    } else {
+      Ok(PhysicalFrame::containing_address(self.address()))
+    }
   }
 }
 
@@ -173,6 +201,47 @@ bitflags! {
   }
 }
 
+/// A 12-bit offset into a 4KiB Pages.
+#[derive(Debug)]
+pub(crate) struct PageOffset(u16);
+
+impl PageOffset {
+  /// Create a new page offset with given offset `u16`.
+  #[inline]
+  pub fn new(offset: u16) -> Self {
+    debug_assert!(offset < (1 << 12));
+    Self(offset)
+  }
+
+  #[inline]
+  pub const fn new_truncate(offset: u16) -> Self {
+    Self(offset % (1 << 12))
+  }
+}
+
+#[cfg(target_pointer_width = "64")]
+impl From<PageOffset> for PtrWidth {
+  #[inline]
+  fn from(offset: PageOffset) -> Self {
+    Self::from(offset.0)
+  }
+}
+
+impl From<PageOffset> for u16 {
+  #[inline]
+  fn from(offset: PageOffset) -> Self {
+    Self::from(offset.0)
+  }
+}
+
+impl From<PageOffset> for usize {
+  #[inline]
+  fn from(offset: PageOffset) -> Self {
+    Self::from(offset.0)
+  }
+}
+
+/// Level for page table, totally four levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum PageTableLevel {
   One = 1,

@@ -13,7 +13,7 @@ impl CR3 {
       asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags));
     }
 
-    let address = PhysicalAddress::new((value & 0x_000F_FFFF_FFFF_F000) as usize);
+    let address = PhysicalAddress::new(value & 0x_000F_FFFF_FFFF_F000);
     let frame = PhysicalFrame::containing_address(address);
     (frame, (value & 0xFFF) as u16)
   }

@@ -1,86 +1,101 @@
-#[cfg(target_arch = "x86")]
-pub mod x86;
-
 use core::marker::PhantomData;
 use core::ops::Add;
 
-#[cfg(target_arch = "x86")]
-use self::x86::*;
 use crate::arch::x86_64::paging::PageSize;
 use crate::arch::x86_64::paging::Size4KiB;
 
+// For aarch64
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
+#[cfg(target_arch = "aarch64")]
+pub use self::aarch64::*;
+
+// For x86
+#[cfg(target_arch = "x86")]
+pub mod x86;
+#[cfg(target_arch = "x86")]
+pub use self::x86::*;
+
+// For x86_64
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64;
-#[cfg(target_arch = "aarch64")]
-use self::aarch64::*;
+#[cfg(target_arch = "x86_64")]
+pub use self::x86_64::*;
+
+pub mod shared;
 
 #[macro_use]
 pub mod macros;
-pub mod shared;
 
 pub struct AddressNotAligned;
 
+#[cfg(target_pointer_width = "64")]
+pub type PtrWidth = u64;
+#[cfg(target_pointer_width = "32")]
+pub type PtrWidth = u32;
+
 #[inline]
-const fn align_down(address: usize, align: usize) -> usize {
+const fn align_down(address: PtrWidth, align: PtrWidth) -> PtrWidth {
   debug_assert!(align.is_power_of_two(), "`align` must be a power of two");
   address & !(align - 1)
 }
 
 #[inline]
-const fn align_up(address: usize, align: usize) -> usize {
+const fn align_up(address: PtrWidth, align: PtrWidth) -> PtrWidth {
   debug_assert!(align.is_power_of_two(), "`align` must be a power of two");
   address & !(align)
 }
 
-/// Physical address.
+/// # Physical address
+///
+/// Raw address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
-pub struct PhysicalAddress(usize);
+pub struct PhysicalAddress(PtrWidth);
 
 impl PhysicalAddress {
   #[inline]
-  pub const fn new(address: usize) -> Self {
+  pub const fn new(address: PtrWidth) -> Self {
     Self(address)
   }
 
   #[inline]
-  pub const fn data(&self) -> usize {
+  pub const fn data(&self) -> PtrWidth {
     self.0
   }
 
   #[cfg(target_pointer_width = "64")]
   #[inline]
-  pub const fn as_u64(&self) -> u64 {
-    self.0 as u64
+  pub const fn as_raw(&self) -> u64 {
+    self.0
   }
 
   #[cfg(target_pointer_width = "32")]
   #[inline]
-  pub const fn as_u32(&self) -> u32 {
-    self.0 as u32
+  pub const fn as_raw(&self) -> u32 {
+    self.0
   }
 
   #[inline]
   fn align_down<S>(self, align: S) -> Self
   where
-    S: Into<usize>,
+    S: Into<PtrWidth>,
   {
-    PhysicalAddress::new(align_down(self.0, align.into()))
+    Self::new(align_down(self.0, align.into()))
   }
 
   #[inline]
   fn align_up<S>(self, align: S) -> Self
   where
-    S: Into<usize>,
+    S: Into<PtrWidth>,
   {
-    PhysicalAddress::new(align_up(self.0, align.into()))
+    Self::new(align_up(self.0, align.into()))
   }
 
+  #[inline]
   fn is_aligned<S>(self, align: S) -> bool
   where
-    S: Into<usize>,
+    S: Into<PtrWidth>,
   {
     self.align_down(align) == self
   }
@@ -92,38 +107,46 @@ impl core::fmt::Debug for PhysicalAddress {
   }
 }
 
+impl Add<PtrWidth> for PhysicalAddress {
+  type Output = Self;
+
+  fn add(self, rhs: PtrWidth) -> Self::Output {
+    Self::new(self.0 + rhs)
+  }
+}
+
 /// Virtual address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
-pub struct VirtualAddress(pub(crate) usize);
+pub struct VirtualAddress(pub(crate) PtrWidth);
 
 impl VirtualAddress {
   #[inline]
-  pub const fn new(address: usize) -> Self {
+  pub const fn new(address: PtrWidth) -> Self {
     Self(address)
   }
 
   #[cfg(target_pointer_width = "64")]
   #[inline]
-  pub const fn as_u64(&self) -> u64 {
-    self.0 as u64
+  pub const fn as_raw(&self) -> PtrWidth {
+    self.0
   }
 
   #[cfg(target_pointer_width = "32")]
   #[inline]
-  pub const fn as_u32(&self) -> u32 {
-    self.0 as u32
+  pub const fn as_u32(&self) -> PtrWidth {
+    self.0
   }
 
   #[cfg(target_pointer_width = "64")]
   #[inline]
   pub fn from_ptr<T: ?Sized>(ptr: *const T) -> Self {
-    Self::new(ptr as *const () as usize)
+    Self::new(ptr as *const () as PtrWidth)
   }
 
   #[inline]
   pub const fn as_ptr<T>(self) -> *const T {
-    self.as_u64() as *const T
+    self.as_raw() as *const T
   }
 
   #[inline]
@@ -141,12 +164,12 @@ impl VirtualAddress {
   // }
 }
 
-impl Add<u64> for VirtualAddress {
+impl Add<PtrWidth> for VirtualAddress {
   type Output = Self;
 
   #[inline]
-  fn add(self, rhs: u64) -> Self::Output {
-    Self::new(self.0 + rhs as usize)
+  fn add(self, rhs: PtrWidth) -> Self::Output {
+    Self::new(self.0 + rhs)
   }
 }
 
@@ -191,7 +214,20 @@ impl<S: PageSize> core::fmt::Debug for PhysicalFrame<S> {
       f,
       "Frame[{}]({:#x})",
       S::DEBUG_STR,
-      self.start_address().as_u64()
+      self.start_address().as_raw()
     )
   }
+}
+
+pub enum FrameError {
+  FrameNotPresent,
+  HugePage,
+}
+
+/// Translate the given virtual address into the physical address. If not mapped, return `None`.
+pub unsafe fn translate_address(
+  address: VirtualAddress,
+  physical_memory_offset: VirtualAddress,
+) -> Option<PhysicalAddress> {
+  translate_address_inner(address, physical_memory_offset)
 }

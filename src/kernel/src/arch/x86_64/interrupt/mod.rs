@@ -12,7 +12,22 @@ lazy_static! {
 
 pub fn init_idt() {
   println!("[INFO   ] Initialize IDT.");
+  IDT.load();
+}
+
+/// Halt instruction.
+/// 
+/// # Safety
+/// 
+#[inline(always)]
+pub unsafe fn halt() {
+  core::arch::asm!("hlt", options(nomem, nostack));
+}
+
+/// Pause instruction.
+#[inline(always)]
+pub fn pause() {
   unsafe {
-    IDT.load();
+    core::arch::asm!("pause", options(nomem, nostack));
   }
 }
