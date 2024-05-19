@@ -25,11 +25,7 @@ const BUFFER_WIDTH: usize = 80;
 
 lazy_static! {
   /// VGA writer instance.
-  pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
-    column_position: 0,
-    color_code:      ColorCode::new(Color::White, Color::Black),
-    buffer:          unsafe { &mut *(0xb8000 as *mut Buffer) },
-  });
+  pub static ref VGA_WRITER: Mutex<VgaWriter> = Mutex::new(VgaWriter::new());
 }
 
 /// VGA color enumeration.
@@ -60,8 +56,8 @@ pub enum Color {
 struct ColorCode(u8);
 
 impl ColorCode {
-  const fn new(foreground: Color, background: Color) -> ColorCode {
-    ColorCode((background as u8) << 4 | (foreground as u8))
+  pub(crate) const fn new(foreground: Color, background: Color) -> Self {
+    Self((background as u8) << 4 | (foreground as u8))
   }
 }
 
@@ -72,12 +68,6 @@ struct ScreenCharacter {
   color_code:      ColorCode,
 }
 
-impl DerefMut for ScreenCharacter {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    self
-  }
-}
-
 impl Deref for ScreenCharacter {
   type Target = ScreenCharacter;
 
@@ -86,19 +76,33 @@ impl Deref for ScreenCharacter {
   }
 }
 
+impl DerefMut for ScreenCharacter {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    self
+  }
+}
+
 /// VGA buffer.
 #[repr(transparent)]
-struct Buffer {
+struct VgaBuffer {
   chars: [[Volatile<ScreenCharacter>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
-pub struct Writer {
+pub struct VgaWriter {
   column_position: usize,
   color_code:      ColorCode,
-  buffer:          &'static mut Buffer,
+  buffer:          &'static mut VgaBuffer,
 }
 
-impl Writer {
+impl VgaWriter {
+  pub(crate) fn new() -> Self {
+    Self {
+      column_position: 0,
+      color_code:      ColorCode::new(Color::White, Color::Black),
+      buffer:          unsafe { &mut *(0xb8000 as *mut VgaBuffer) },
+    }
+  }
+
   pub fn write_byte(&mut self, byte: u8) {
     match byte {
       b'\n' => self.new_line(),
@@ -151,9 +155,21 @@ impl Writer {
       self.buffer.chars[row][col].write(blank);
     }
   }
+
+  pub fn clear(&mut self) {
+    let blank = ScreenCharacter {
+      ascii_character: b' ',
+      color_code:      self.color_code,
+    };
+    for row in 0..BUFFER_HEIGHT {
+      for col in 0..BUFFER_WIDTH {
+        self.buffer.chars[row][col].write(blank);
+      }
+    }
+  }
 }
 
-impl core::fmt::Write for Writer {
+impl core::fmt::Write for VgaWriter {
   fn write_str(&mut self, s: &str) -> core::fmt::Result {
     self.write_string(s);
     Ok(())

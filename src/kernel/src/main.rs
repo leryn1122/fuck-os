@@ -4,6 +4,7 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![allow(unused)]
 
 use crate::arch::VirtualAddress;
 #[rustfmt::skip]
@@ -23,7 +24,6 @@ pub mod proc;
 pub mod support;
 pub mod syscall;
 pub mod vfs;
-pub mod vga;
 
 mod panic;
 #[cfg(test)]
@@ -33,7 +33,7 @@ mod test;
 /// named `_start` by default
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-  crate::log::init();
+  log::init();
 
   println!("[INFO   ] Kernel is booting.");
 

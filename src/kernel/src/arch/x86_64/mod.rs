@@ -1,5 +1,5 @@
-use x86_64::structures::paging::PageTableIndex;
-
+use crate::arch::paging::PageTableIndex;
+use crate::arch::paging::PageTableLevel;
 use crate::arch::x86_64::paging::PageTable;
 use crate::arch::x86_64::reg::CR3;
 use crate::arch::FrameError;
@@ -47,7 +47,7 @@ pub(crate) fn translate_address_inner(
     let table_ptr: *const PageTable = virtual_address.as_ptr();
     let table = unsafe { &*table_ptr };
 
-    let entry = &table[index.into()];
+    let entry = &table[index];
     frame = match entry.frame() {
       Ok(frame) => frame,
       Err(FrameError::FrameNotPresent) => return None,
@@ -77,5 +77,10 @@ impl VirtualAddress {
   #[inline]
   pub const fn p4_index(self) -> PageTableIndex {
     PageTableIndex::new_truncate((self.0 >> 12 >> 9 >> 9 >> 9) as u16)
+  }
+
+  #[inline]
+  pub const fn page_table_index(self, level: PageTableLevel) -> PageTableIndex {
+    PageTableIndex::new_truncate((self.0 >> 12 >> ((level as u8 - 1) * 9)) as u16)
   }
 }

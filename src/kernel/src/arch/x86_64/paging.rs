@@ -100,6 +100,22 @@ impl core::ops::IndexMut<usize> for PageTable {
   }
 }
 
+impl core::ops::Index<PageTableIndex> for PageTable {
+  type Output = PageTableEntry;
+
+  #[inline]
+  fn index(&self, index: PageTableIndex) -> &Self::Output {
+    &self.entries[usize::from(index)]
+  }
+}
+
+impl core::ops::IndexMut<PageTableIndex> for PageTable {
+  #[inline]
+  fn index_mut(&mut self, index: PageTableIndex) -> &mut Self::Output {
+    &mut self.entries[usize::from(index)]
+  }
+}
+
 impl core::fmt::Debug for PageTable {
   #[inline]
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -180,9 +196,46 @@ impl core::fmt::Debug for PageTableEntry {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct PageTableIndex(u16);
+pub(crate) struct PageTableIndex(u16);
 
-impl PageTableIndex {}
+impl PageTableIndex {
+  #[inline]
+  pub const fn new(index: u16) -> Self {
+    debug_assert!((index as usize) < ENTRY_COUNT);
+    Self(index)
+  }
+
+  #[inline]
+  pub const fn new_truncate(index: u16) -> Self {
+    Self(index % ENTRY_COUNT as u16)
+  }
+
+  #[inline]
+  pub(crate) const fn into_u64(self) -> u64 {
+    self.0 as u64
+  }
+}
+
+impl From<PageTableIndex> for PtrWidth {
+  #[inline]
+  fn from(index: PageTableIndex) -> Self {
+    Self::from(index.0)
+  }
+}
+
+impl From<PageTableIndex> for u16 {
+  #[inline]
+  fn from(index: PageTableIndex) -> Self {
+    index.0
+  }
+}
+
+impl From<PageTableIndex> for usize {
+  #[inline]
+  fn from(index: PageTableIndex) -> Self {
+    usize::from(index.0)
+  }
+}
 
 bitflags! {
   #[rustfmt::skip]
@@ -230,7 +283,7 @@ impl From<PageOffset> for PtrWidth {
 impl From<PageOffset> for u16 {
   #[inline]
   fn from(offset: PageOffset) -> Self {
-    Self::from(offset.0)
+    offset.0
   }
 }
 
@@ -243,7 +296,7 @@ impl From<PageOffset> for usize {
 
 /// Level for page table, totally four levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum PageTableLevel {
+pub(crate) enum PageTableLevel {
   One = 1,
   Two,
   Three,

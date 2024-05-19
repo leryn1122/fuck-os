@@ -3,22 +3,48 @@ use x86_64::structures::idt::InterruptDescriptorTable;
 
 use crate::println;
 
-lazy_static! {
-  static ref IDT: InterruptDescriptorTable = {
-    let idt = InterruptDescriptorTable::new();
-    idt
-  };
-}
-
 pub fn init_idt() {
   println!("[INFO   ] Initialize IDT.");
-  IDT.load();
+  // IDT.load();
+}
+
+/// Enable interrupts.
+///
+/// x86_64 assemble instruction `STI` to enable the interrupts.
+///
+/// ```asm
+/// # Set interrupt flag
+/// sti
+/// ```
+///
+/// # Safety
+#[inline(always)]
+pub unsafe fn enable() {
+  unsafe {
+    core::arch::asm!("sti", options(preserves_flags, nostack));
+  }
+}
+
+/// Disable interrupts.
+///
+/// x86_64 assemble instruction `CLI` to disable the interrupts.
+///
+/// ```asm
+/// # Clear the interrupt flag
+/// sti
+/// ```
+///
+/// # Safety
+#[inline(always)]
+pub unsafe fn disable() {
+  unsafe {
+    core::arch::asm!("cli", options(preserves_flags, nostack));
+  }
 }
 
 /// Halt instruction.
-/// 
+///
 /// # Safety
-/// 
 #[inline(always)]
 pub unsafe fn halt() {
   core::arch::asm!("hlt", options(nomem, nostack));
