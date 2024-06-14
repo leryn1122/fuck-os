@@ -1,11 +1,15 @@
 [toolchain]
 channel = "nightly"
+components = [
+  "rust-src"
+]
 
 [build]
 target = "x86_64-kernel.json"
 
 [unstable]
 build-std = [
+  "alloc",
   "core",
   "compiler_builtins"
 ]

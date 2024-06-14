@@ -7,14 +7,14 @@ pub trait PortSize: PortRead + PortWrite {}
 
 /// A helper trait that implements the read port operation.
 pub trait PortRead {
-  /// # Safety
+  /// ## Safety
   /// Unsafe because the I/O port could have side effects that violate memory safety.
   unsafe fn read_from_port(port: PortNumber) -> Self;
 }
 
 /// A helper trait that implements the write port operation.
 pub trait PortWrite {
-  /// # Safety
+  /// ## Safety
   /// Unsafe because the I/O port could have side effects that violate memory safety.
   unsafe fn write_to_port(port: PortNumber, value: Self);
 }
@@ -25,6 +25,8 @@ pub struct Port<S: PortSize> {
 }
 
 impl<S: PortSize> Port<S> {
+  ///
+  /// ## Safety
   pub const unsafe fn new(port: PortNumber) -> Self {
     Self {
       port,

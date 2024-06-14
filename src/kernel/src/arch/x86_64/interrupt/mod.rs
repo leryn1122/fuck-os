@@ -4,7 +4,7 @@ use x86_64::structures::idt::InterruptDescriptorTable;
 use crate::println;
 
 pub fn init_idt() {
-  println!("[INFO   ] Initialize IDT.");
+  println!("[INFO ] Initialize IDT.");
   // IDT.load();
 }
 
@@ -17,7 +17,7 @@ pub fn init_idt() {
 /// sti
 /// ```
 ///
-/// # Safety
+/// ## Safety
 #[inline(always)]
 pub unsafe fn enable() {
   unsafe {
@@ -31,10 +31,10 @@ pub unsafe fn enable() {
 ///
 /// ```asm
 /// # Clear the interrupt flag
-/// sti
+/// cli
 /// ```
 ///
-/// # Safety
+/// ## Safety
 #[inline(always)]
 pub unsafe fn disable() {
   unsafe {
@@ -44,7 +44,7 @@ pub unsafe fn disable() {
 
 /// Halt instruction.
 ///
-/// # Safety
+/// ## Safety
 #[inline(always)]
 pub unsafe fn halt() {
   core::arch::asm!("hlt", options(nomem, nostack));

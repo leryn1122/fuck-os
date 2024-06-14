@@ -36,6 +36,6 @@ lazy_static! {
 }
 
 pub fn init_gdt() {
-  println!("[INFO   ] Initialize GDT.");
+  println!("[INFO ] Initialize GDT.");
   GDT.load();
 }

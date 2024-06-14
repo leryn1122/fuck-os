@@ -1,5 +1,8 @@
 //! # Memory Management
 
+use x86_64::structures::paging::OffsetPageTable;
+
+use crate::arch::active_level_4_table;
 use crate::arch::PhysicalAddress;
 use crate::arch::VirtualAddress;
 
@@ -19,11 +22,11 @@ pub struct MemoryDescriptor {
   pub(crate) virtual_address:  VirtualAddress,
 }
 
-/// The memory area
-/// Such as BSS, Data, Text segment.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct MemoryArea {
-  /// The start address of the memory area
-  pub(crate) base_address: usize,
-  pub(crate) length:       usize,
+/// ## Safety
+pub unsafe fn init_memory(physical_address_offset: VirtualAddress)
+// -> ()<'static>
+{
+  let level_4_table = unsafe { active_level_4_table(physical_address_offset) };
+
+  // OffsetPageTable::new(level_4_table, physical_address_offset)
 }

@@ -10,15 +10,27 @@ edition = "2021"
 
 [dependencies]
 
+[dependencies.allocator-api2]
+version = "0.2.18"
+default-features = false
+
 [dependencies.bitflags]
 version = "2.5.0"
 
 [dependencies.bootloader]
 version = "0.9.28"
 
+## https://stdrc.cc/post/2021/01/31/writing-os-in-rust/
+#[dependencies.compiler_builtins]
+#git = "https://github.com/rust-lang/compiler-builtins"
+#features = ["c"]
+
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]
+
+[dependencies.linked_list_allocator]
+version = "0.10.5"
 
 [dependencies.log]
 version = "0.4.21"
@@ -50,6 +62,9 @@ test-timeout = 300
 
 [profile.dev]
 panic = "abort"
+opt-level = 1
 
 [profile.release]
 panic = "abort"
+lto = true
+debug = true
